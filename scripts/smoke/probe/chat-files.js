@@ -46,7 +46,7 @@
         } finally {
           react.rendering = false
         }
-        var out = { classes: [], texts: [], root: null, diff: null, io: null, hidden: null, hiddenText: null }
+        var out = { classes: [], texts: [], figures: [], root: null, diff: null, io: null, hidden: null, hiddenText: null }
         walkTree(tree, function (node) {
           var props = node.props || {}
           if (typeof props.className === 'string') {
@@ -60,6 +60,15 @@
             if (props.className.indexOf('dsh-claude-file-hidden') >= 0) {
               out.hidden = props
               out.hiddenText = Array.isArray(props.children) ? props.children[0] : props.children
+            }
+            // A tail figure rolls character by character, so its number is the
+            // characters its own element carries, read in order (D62).
+            if (props.className.indexOf('dsh-claude-file-stat') >= 0) {
+              var figure = ''
+              walkTree(props.children, function (inner) {
+                if (inner.type === '#text') figure += String(inner.props.children)
+              })
+              out.figures.push(figure)
             }
           }
           if (node.type === 'DisclosureRow') out.disclosure = props

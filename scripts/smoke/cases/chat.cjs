@@ -204,8 +204,8 @@ module.exports = {
     check('a settled edit reads as a row of the edit variant in the ok state',
       (collapsed.root || {}).variant === 'edit' && (collapsed.root || {}).state === 'ok', JSON.stringify(collapsed.root))
     check('the settled row names the shortened path and the +n -m tail',
-      collapsed.texts.includes('app.js') && collapsed.texts.includes('+1') && collapsed.texts.includes('-1'),
-      JSON.stringify(collapsed.texts))
+      collapsed.texts.includes('app.js') && (collapsed.figures || []).join(' ') === '+1 -1',
+      JSON.stringify({ figures: collapsed.figures, texts: collapsed.texts }))
     check('the settled row\'s summary carries the file link',
       typeof collapsed.summary === 'string' && collapsed.summary.includes('dsh-claude-file-link'),
       JSON.stringify(collapsed.summary))

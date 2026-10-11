@@ -59,13 +59,15 @@ export const CHAT_FILE_STAT_CLASS = 'dsh-claude-file-stat'
 export const CHAT_FILE_ADD_CLASS = 'dsh-claude-file-add'
 /** The removed count. */
 export const CHAT_FILE_DEL_CLASS = 'dsh-claude-file-del'
-/** One figure of the tail while its number rolls in place. */
+/** One figure of the tail, which rolls character by character. */
 export const CHAT_FILE_ROLL_CLASS = 'dsh-claude-file-roll'
-/** On that figure while a change is in flight and its two numbers travel. */
-export const CHAT_FILE_ROLLING_CLASS = 'dsh-claude-file-rolling'
-/** The number leaving upward. */
+/** One character of that figure, in its own box. */
+export const CHAT_FILE_ROLL_DIGIT_CLASS = 'dsh-claude-file-roll-digit'
+/** On the character whose own digit changed: this one travels. */
+export const CHAT_FILE_ROLL_MOVING_CLASS = 'dsh-claude-file-roll-moving'
+/** The digit leaving upward. */
 export const CHAT_FILE_ROLL_OUT_CLASS = 'dsh-claude-file-roll-out'
-/** The number in flow, which the leaving number makes way for. */
+/** The digit in flow, which the leaving one makes way for. */
 export const CHAT_FILE_ROLL_IN_CLASS = 'dsh-claude-file-roll-in'
 /**
  * On the row while its file's calls are read together: `head` on the row that

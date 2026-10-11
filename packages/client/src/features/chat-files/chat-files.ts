@@ -1,6 +1,6 @@
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 import * as React from 'react'
-import { CHAT_DIFF_MAX_LINES, CHAT_FILE_ADD_CLASS, CHAT_FILE_BODY_CLASS, CHAT_FILE_CHEVRON_CLASS, CHAT_FILE_DEL_CLASS, CHAT_FILE_DIFF_CLASS, CHAT_FILE_HIDDEN_CLASS, CHAT_FILE_INSPECT_CLASS, CHAT_FILE_IO_CLASS, CHAT_FILE_IO_DIVIDER_CLASS, CHAT_FILE_IO_LABEL_CLASS, CHAT_FILE_IO_SECTION_CLASS, CHAT_FILE_IO_TEXT_CLASS, CHAT_FILE_LEADING_CLASS, CHAT_FILE_LINK_CLASS, CHAT_FILE_MERGED_COPY, CHAT_FILE_MERGE_ATTR, CHAT_FILE_MERGE_GONE, CHAT_FILE_MERGE_HEAD, CHAT_FILE_MERGE_MEMBER, CHAT_FILE_ROLLING_CLASS, CHAT_FILE_ROLL_CLASS, CHAT_FILE_ROLL_IN_CLASS, CHAT_FILE_ROLL_OUT_CLASS, CHAT_FILE_ROW_CLASS, CHAT_FILE_ROW_LINE_CLASS, CHAT_FILE_SEAT, CHAT_FILE_SEP_CLASS, CHAT_FILE_STAT_CLASS, CHAT_FILE_SUFFIX_CLASS, CHAT_FILE_TITLE_CLASS, chatFileCallHead, chatFileDiffBlockLabels, chatFileDiffHunks, chatFileParseArgs, chatFileRowModel, chatFileStateLabel, chatFileSummaryClassName } from './file-row-model'
+import { CHAT_DIFF_MAX_LINES, CHAT_FILE_ADD_CLASS, CHAT_FILE_BODY_CLASS, CHAT_FILE_CHEVRON_CLASS, CHAT_FILE_DEL_CLASS, CHAT_FILE_DIFF_CLASS, CHAT_FILE_HIDDEN_CLASS, CHAT_FILE_INSPECT_CLASS, CHAT_FILE_IO_CLASS, CHAT_FILE_IO_DIVIDER_CLASS, CHAT_FILE_IO_LABEL_CLASS, CHAT_FILE_IO_SECTION_CLASS, CHAT_FILE_IO_TEXT_CLASS, CHAT_FILE_LEADING_CLASS, CHAT_FILE_LINK_CLASS, CHAT_FILE_MERGED_COPY, CHAT_FILE_MERGE_ATTR, CHAT_FILE_MERGE_GONE, CHAT_FILE_MERGE_HEAD, CHAT_FILE_MERGE_MEMBER, CHAT_FILE_ROLL_CLASS, CHAT_FILE_ROLL_DIGIT_CLASS, CHAT_FILE_ROLL_IN_CLASS, CHAT_FILE_ROLL_MOVING_CLASS, CHAT_FILE_ROLL_OUT_CLASS, CHAT_FILE_ROW_CLASS, CHAT_FILE_ROW_LINE_CLASS, CHAT_FILE_SEAT, CHAT_FILE_SEP_CLASS, CHAT_FILE_STAT_CLASS, CHAT_FILE_SUFFIX_CLASS, CHAT_FILE_TITLE_CLASS, chatFileCallHead, chatFileDiffBlockLabels, chatFileDiffHunks, chatFileParseArgs, chatFileRowModel, chatFileStateLabel, chatFileSummaryClassName } from './file-row-model'
 import { createFileMerge, rowCarrier } from './file-row-merge'
 import { copyLabel } from '../../core/i18n'
 import { motionReduced } from '../../core/prefs'
@@ -60,11 +60,13 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
   const fileMerge = createFileMerge()
 
   /**
-   * One figure of the row's tail. A change rolls the number it showed upward as
-   * the new one rises in behind it — the same 160 ms and curve the process
-   * header's figures roll with (dsh-better-display's fold figures,
-   * THIRD_PARTY_NOTICES.md) — and the animation choice decides whether the
-   * leaving number is drawn at all (D26).
+   * One figure of the row's tail. Every character whose own digit changed rolls
+   * in its own box — the digit that was there leaves upward as the new one rises
+   * in behind it, the same 160 ms and curve the process header's counted figures
+   * roll with (dsh-better-display's fold figures, THIRD_PARTY_NOTICES.md) —
+   * while the characters that hold keep their place, so a growing number reads
+   * as an odometer rather than as a whole new number. The animation choice
+   * decides whether a leaving digit is drawn at all (D26).
    */
   const RollingStat = (props: { className: string, text: string, running: boolean }) => {
     const [leaving, setLeaving] = React.useState<string | null>(null)
@@ -75,24 +77,27 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
       shown.current = props.text
       setLeaving(motionReduced() ? null : before)
     }, [props.text])
-    // The number in flow is keyed by its own text, so a change mounts a fresh
-    // element, and the travel is classed on the figure rather than on that
-    // element: an animation starts when its name reaches an element that did
-    // not carry it, which is what makes the rising number rise on every change
-    // while the row's first number stands still where it appeared.
-    const rolling = leaving !== null
     return h(primitives.TextShimmer, {
-      className: props.className + ' ' + CHAT_FILE_ROLL_CLASS + (rolling ? ' ' + CHAT_FILE_ROLLING_CLASS : ''),
+      className: props.className + ' ' + CHAT_FILE_ROLL_CLASS,
       active: props.running,
-      children: [
-        leaving === null ? null : h('span', {
-          key: 'out',
-          className: CHAT_FILE_ROLL_OUT_CLASS,
-          'aria-hidden': true,
-          onAnimationEnd: () => setLeaving(null),
-        }, leaving),
-        h('span', { key: props.text, className: CHAT_FILE_ROLL_IN_CLASS }, props.text),
-      ],
+      children: [...props.text].map((char, at) => {
+        // A character the reader has not seen yet arrives from below with no
+        // digit leaving it; a character whose own digit changed swaps the two.
+        const before = leaving === null ? char : leaving[at] ?? null
+        const moving = before !== char
+        return h('span', {
+          key: `${at}:${char}`,
+          className: CHAT_FILE_ROLL_DIGIT_CLASS + (moving ? ' ' + CHAT_FILE_ROLL_MOVING_CLASS : ''),
+        }, [
+          moving && before !== null ? h('span', {
+            key: 'out',
+            className: CHAT_FILE_ROLL_OUT_CLASS,
+            'aria-hidden': true,
+            onAnimationEnd: () => setLeaving(null),
+          }, before) : null,
+          h('span', { key: 'in', className: CHAT_FILE_ROLL_IN_CLASS }, char),
+        ])
+      }),
     })
   }
 

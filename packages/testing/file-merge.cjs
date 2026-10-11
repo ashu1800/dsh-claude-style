@@ -30,17 +30,21 @@ const CHANGES = 4
 /** The text each change leaves behind, so the merged card can be read for all of them. */
 const NEW_LINES = ['const first = 2', 'const second = 2', 'const third = 2', 'const fourth = 2']
 
-/** One figure of a row's tail, as the reader sees it. */
-const FIGURE = '.dsh-claude-file-roll-in'
-
 /**
  * Every file-change row on the page: which one stands for its file, its path,
- * its tail, whether it is visible, and the box the host drew for that call.
+ * its tail, whether it is visible, and the box the host drew for that call. A
+ * figure rolls one character at a time, so its number is the digits in flow of
+ * its own two characters read in order.
  */
-const readRows = (page) => page.evaluate((figure) => {
+const readRows = (page) => page.evaluate(() => {
+  const figuresOf = (root) => ['.dsh-claude-file-add', '.dsh-claude-file-del'].map((selector) => {
+    const figure = root.querySelector(selector)
+    if (figure === null) return null
+    return [...figure.querySelectorAll('.dsh-claude-file-roll-in')].map((span) => span.textContent).join('')
+  })
   return [...document.querySelectorAll('.dsh-claude-file-root')].map((root) => {
     const box = root.closest('[data-chat-call-id]')
-    const figures = [...root.querySelectorAll(figure)].map((span) => span.textContent)
+    const figures = figuresOf(root)
     return {
       merge: root.getAttribute('data-dsh-claude-file-merge'),
       path: root.querySelector('.dsh-claude-file-link, .dsh-claude-file-summary')?.textContent ?? null,
@@ -51,24 +55,27 @@ const readRows = (page) => page.evaluate((figure) => {
       carrierHeight: box === null ? null : Math.round(box.getBoundingClientRect().height),
     }
   })
-}, FIGURE)
+})
 
 /**
  * The row that stands for the changed file, sampled once: its figures, whether a
- * number is leaving and a number rising, and how many rows of that file the
- * reader can see. The figures are read from the first of each pair the shimmer
- * draws — a figure drawn while its row runs is drawn twice, once as the real
- * number and once as its sweep.
+ * digit is leaving and a digit rising, and how many rows of that file the reader
+ * can see.
  */
-const readHead = (page, file) => page.evaluate(([figure, suffix]) => {
+const readHead = (page, file) => page.evaluate((suffix) => {
+  const figuresOf = (root) => ['.dsh-claude-file-add', '.dsh-claude-file-del'].map((selector) => {
+    const figure = root.querySelector(selector)
+    if (figure === null) return null
+    return [...figure.querySelectorAll('.dsh-claude-file-roll-in')].map((span) => span.textContent).join('')
+  })
   const roots = [...document.querySelectorAll('.dsh-claude-file-root')]
   const ofFile = (root) => (root.querySelector('.dsh-claude-file-link, .dsh-claude-file-summary')?.textContent ?? '').endsWith(suffix)
   const mark = (root) => root.getAttribute('data-dsh-claude-file-merge')
   // The row that stands, or the file's one row before a second change joins it.
   const head = roots.find((root) => mark(root) === 'head') ?? roots.find((root) => ofFile(root) && mark(root) === null)
   if (head === undefined) return null
-  const figures = [...head.querySelectorAll(figure)].map((span) => span.textContent)
-  // A figure is rolling while the number leaving it and the number rising into
+  const figures = figuresOf(head)
+  // A character is rolling while the digit leaving it and the digit rising into
   // it both have an animation in flight.
   const running = (selector) => [...head.querySelectorAll(selector)]
     .some((span) => span.getAnimations().some((animation) => animation.playState === 'running'))
@@ -79,7 +86,7 @@ const readHead = (page, file) => page.evaluate(([figure, suffix]) => {
     rising: running('.dsh-claude-file-roll-in'),
     visible: roots.filter((root) => ofFile(root) && root.checkVisibility()).length,
   }
-}, [FIGURE, file])
+}, file)
 
 /** One number out of a `+n` figure. */
 const count = (figure) => Number(String(figure ?? '').replace(/[^\d]/g, ''))
