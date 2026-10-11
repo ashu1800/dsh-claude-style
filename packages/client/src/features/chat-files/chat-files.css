@@ -98,11 +98,13 @@ body[data-dsh-claude-style] [data-dsh-claude-file-merge="gone"] {
 /* A figure of the tail rolls in place: the number that was there leaves upward
    as the new one rises in behind it, the same 160 ms and curve the process
    header's counted figures roll with (dsh-better-display's fold figures,
-   THIRD_PARTY_NOTICES.md). The classes land on the TextShimmer the figure is
-   drawn through — its root is already the positioned, max-content box the two
-   numbers share — and the figure in flow is the new number, so the box takes
-   its width from the first frame. */
+   THIRD_PARTY_NOTICES.md). The classes land on the figure's own box, whichever
+   element the host draws it as, and the number in flow is the new one, so the
+   box takes its width from the first frame. That box is made its own
+   positioning context: the host's box is not positioned, and without this the
+   leaving number would sit against the nearest positioned ancestor instead. */
 body[data-dsh-claude-style] .dsh-claude-file-roll {
+  position: relative;
   overflow: hidden;
   font-variant-numeric: tabular-nums;
 }
@@ -116,7 +118,10 @@ body[data-dsh-claude-style] .dsh-claude-file-roll-out {
   animation: dsh-claude-file-roll-out 160ms cubic-bezier(.16, 1, .3, 1) forwards;
 }
 
-body[data-dsh-claude-style] .dsh-claude-file-roll-in {
+/* The travel is classed on the figure while a change is in flight: the number
+   arriving with the row's first appearance stands still, and the numbers of
+   every change after it move. */
+body[data-dsh-claude-style] .dsh-claude-file-roll.dsh-claude-file-rolling .dsh-claude-file-roll-in {
   animation: dsh-claude-file-roll-in 160ms cubic-bezier(.16, 1, .3, 1);
 }
 

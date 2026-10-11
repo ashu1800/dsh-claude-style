@@ -54,10 +54,11 @@ const readRows = (page) => page.evaluate((figure) => {
 }, FIGURE)
 
 /**
- * The row that stands for the changed file, sampled once: its figures, whether
- * a number is leaving, and how many rows of that file the reader can see. The
- * figures are read from the first of each pair the shimmer draws — a running
- * figure is drawn twice, once as the real number and once as its sweep.
+ * The row that stands for the changed file, sampled once: its figures, whether a
+ * number is leaving and a number rising, and how many rows of that file the
+ * reader can see. The figures are read from the first of each pair the shimmer
+ * draws — a figure drawn while its row runs is drawn twice, once as the real
+ * number and once as its sweep.
  */
 const readHead = (page, file) => page.evaluate(([figure, suffix]) => {
   const roots = [...document.querySelectorAll('.dsh-claude-file-root')]
@@ -67,10 +68,15 @@ const readHead = (page, file) => page.evaluate(([figure, suffix]) => {
   const head = roots.find((root) => mark(root) === 'head') ?? roots.find((root) => ofFile(root) && mark(root) === null)
   if (head === undefined) return null
   const figures = [...head.querySelectorAll(figure)].map((span) => span.textContent)
+  // A figure is rolling while the number leaving it and the number rising into
+  // it both have an animation in flight.
+  const running = (selector) => [...head.querySelectorAll(selector)]
+    .some((span) => span.getAnimations().some((animation) => animation.playState === 'running'))
   return {
     add: figures[0] ?? null,
     del: figures[1] ?? null,
-    leaving: head.querySelector('.dsh-claude-file-roll-out') !== null,
+    leaving: running('.dsh-claude-file-roll-out'),
+    rising: running('.dsh-claude-file-roll-in'),
     visible: roots.filter((root) => ofFile(root) && root.checkVisibility()).length,
   }
 }, [FIGURE, file])
@@ -143,6 +149,7 @@ function fileMergeScenario({ check }) {
       const shown = samples.map((sample) => sample.visible)
       const changes = adds.filter((add, at) => at > 0 && add !== adds[at - 1]).length
       const leaving = samples.filter((sample) => sample.leaving).length
+      const rising = samples.filter((sample) => sample.rising).length
       const card = notes.card ?? ''
       return [
         check('同一个文件的四次改动在页面上只留一行可见',
@@ -159,8 +166,9 @@ function fileMergeScenario({ check }) {
         check('轮次进行中数字随每次改动长大，这个文件始终不多于一行可见',
           changes >= CHANGES - 1 && adds.length > 0 && adds[adds.length - 1] === CHANGES && shown.every((count) => count <= 1),
           `${changes} changes over ${adds.length} samples: adds=${JSON.stringify(adds)} shown=${JSON.stringify(shown)}`),
-        check('数字变化时旧数字向上离开过',
-          leaving >= 1, `frames with a leaving figure=${leaving} of ${samples.length}`),
+        check('数字变化时旧数字向上离开、新数字自下升入',
+          leaving >= 1 && rising >= 1,
+          `frames leaving=${leaving}, rising=${rising} of ${samples.length}`),
         check('另一个文件只写一次，单独成行，没有被卷进这一次合并',
           notesRows.length === 1 && notesRows[0].merge === null, JSON.stringify(notesRows)),
         check('展开代表行读到的是全部改动',

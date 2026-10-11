@@ -1,6 +1,6 @@
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 import * as React from 'react'
-import { CHAT_DIFF_MAX_LINES, CHAT_FILE_ADD_CLASS, CHAT_FILE_BODY_CLASS, CHAT_FILE_CHEVRON_CLASS, CHAT_FILE_DEL_CLASS, CHAT_FILE_DIFF_CLASS, CHAT_FILE_HIDDEN_CLASS, CHAT_FILE_INSPECT_CLASS, CHAT_FILE_IO_CLASS, CHAT_FILE_IO_DIVIDER_CLASS, CHAT_FILE_IO_LABEL_CLASS, CHAT_FILE_IO_SECTION_CLASS, CHAT_FILE_IO_TEXT_CLASS, CHAT_FILE_LEADING_CLASS, CHAT_FILE_LINK_CLASS, CHAT_FILE_MERGED_COPY, CHAT_FILE_MERGE_ATTR, CHAT_FILE_MERGE_GONE, CHAT_FILE_MERGE_HEAD, CHAT_FILE_MERGE_MEMBER, CHAT_FILE_ROLL_CLASS, CHAT_FILE_ROLL_IN_CLASS, CHAT_FILE_ROLL_OUT_CLASS, CHAT_FILE_ROW_CLASS, CHAT_FILE_ROW_LINE_CLASS, CHAT_FILE_SEAT, CHAT_FILE_SEP_CLASS, CHAT_FILE_STAT_CLASS, CHAT_FILE_SUFFIX_CLASS, CHAT_FILE_TITLE_CLASS, chatFileCallHead, chatFileDiffBlockLabels, chatFileDiffHunks, chatFileParseArgs, chatFileRowModel, chatFileStateLabel, chatFileSummaryClassName } from './file-row-model'
+import { CHAT_DIFF_MAX_LINES, CHAT_FILE_ADD_CLASS, CHAT_FILE_BODY_CLASS, CHAT_FILE_CHEVRON_CLASS, CHAT_FILE_DEL_CLASS, CHAT_FILE_DIFF_CLASS, CHAT_FILE_HIDDEN_CLASS, CHAT_FILE_INSPECT_CLASS, CHAT_FILE_IO_CLASS, CHAT_FILE_IO_DIVIDER_CLASS, CHAT_FILE_IO_LABEL_CLASS, CHAT_FILE_IO_SECTION_CLASS, CHAT_FILE_IO_TEXT_CLASS, CHAT_FILE_LEADING_CLASS, CHAT_FILE_LINK_CLASS, CHAT_FILE_MERGED_COPY, CHAT_FILE_MERGE_ATTR, CHAT_FILE_MERGE_GONE, CHAT_FILE_MERGE_HEAD, CHAT_FILE_MERGE_MEMBER, CHAT_FILE_ROLLING_CLASS, CHAT_FILE_ROLL_CLASS, CHAT_FILE_ROLL_IN_CLASS, CHAT_FILE_ROLL_OUT_CLASS, CHAT_FILE_ROW_CLASS, CHAT_FILE_ROW_LINE_CLASS, CHAT_FILE_SEAT, CHAT_FILE_SEP_CLASS, CHAT_FILE_STAT_CLASS, CHAT_FILE_SUFFIX_CLASS, CHAT_FILE_TITLE_CLASS, chatFileCallHead, chatFileDiffBlockLabels, chatFileDiffHunks, chatFileParseArgs, chatFileRowModel, chatFileStateLabel, chatFileSummaryClassName } from './file-row-model'
 import { createFileMerge, rowCarrier } from './file-row-merge'
 import { copyLabel } from '../../core/i18n'
 import { motionReduced } from '../../core/prefs'
@@ -75,16 +75,23 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
       shown.current = props.text
       setLeaving(motionReduced() ? null : before)
     }, [props.text])
+    // The number in flow is keyed by its own text, so a change mounts a fresh
+    // element, and the travel is classed on the figure rather than on that
+    // element: an animation starts when its name reaches an element that did
+    // not carry it, which is what makes the rising number rise on every change
+    // while the row's first number stands still where it appeared.
+    const rolling = leaving !== null
     return h(primitives.TextShimmer, {
-      className: props.className + ' ' + CHAT_FILE_ROLL_CLASS,
+      className: props.className + ' ' + CHAT_FILE_ROLL_CLASS + (rolling ? ' ' + CHAT_FILE_ROLLING_CLASS : ''),
       active: props.running,
       children: [
         leaving === null ? null : h('span', {
+          key: 'out',
           className: CHAT_FILE_ROLL_OUT_CLASS,
           'aria-hidden': true,
           onAnimationEnd: () => setLeaving(null),
         }, leaving),
-        h('span', { className: CHAT_FILE_ROLL_IN_CLASS }, props.text),
+        h('span', { key: props.text, className: CHAT_FILE_ROLL_IN_CLASS }, props.text),
       ],
     })
   }
